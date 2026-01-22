@@ -1,10 +1,9 @@
 import './App.css';
-import Pastebin from './components/Pastebin';
-
+import Hrm from './components/Hrm';
 function App() {
   return (
     <div className="App">
-      <Pastebin />
+      <Hrm/>
     </div>
   );
 }
