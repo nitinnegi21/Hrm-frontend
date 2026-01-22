@@ -38,7 +38,6 @@ function Hrm() {
     try {
       const res = await ServiceCall.getv2("/employees");
       setEmployees(res?.data);
-      toast.error("");
     } catch (err) {
       toast.error("Failed to fetch employees");
     }
@@ -50,7 +49,6 @@ function Hrm() {
     try {
       const res = await ServiceCall.getv2(`/attendance`);
       setAttendance(res?.data);
-      toast.error("");
     } catch (err) {
       toast.error("Failed to fetch attendance");
     }
