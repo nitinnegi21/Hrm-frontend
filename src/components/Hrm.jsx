@@ -7,12 +7,10 @@ import {
   Check,
   X,
   Users,
-  AlertCircle,
 } from "lucide-react";
 import { ServiceCall } from "../utility/Servicecall";
 import toast from "react-hot-toast";
 
-const API_URL = process.env.REACT_APP_API_URL;
 
 function Hrm() {
   const [activeTab, setActiveTab] = useState("employees");
