@@ -1,38 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { User, Calendar, Plus, Trash2, Check, X, Users, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import {
+  User,
+  Calendar,
+  Plus,
+  Trash2,
+  Check,
+  X,
+  Users,
+  AlertCircle,
+} from "lucide-react";
+import { ServiceCall } from "../utility/Servicecall";
+import toast from "react-hot-toast";
 
-const API_URL =  process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const API_URL = process.env.REACT_APP_API_URL;
 
 function Hrm() {
-  const [activeTab, setActiveTab] = useState('employees');
+  const [activeTab, setActiveTab] = useState("employees");
   const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
 
   const [empForm, setEmpForm] = useState({
-    employeeId: '',
-    fullName: '',
-    email: '',
-    department: ''
+    employeeId: "",
+    fullName: "",
+    email: "",
+    department: "",
   });
 
   const [attForm, setAttForm] = useState({
-    employeeId: '',
-    date: new Date().toISOString().split('T')[0],
-    status: 'Present'
+    employeeId: "",
+    date: new Date().toISOString().split("T")[0],
+    status: "Present",
   });
 
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/employees`);
-      const data = await res.json();
-      setEmployees(data);
-      setError('');
+      const res = await ServiceCall.getv2("/employees");
+      setEmployees(res?.data);
+      toast.error("");
     } catch (err) {
-      setError('Failed to fetch employees');
+      toast.error("Failed to fetch employees");
     }
     setLoading(false);
   };
@@ -40,12 +48,11 @@ function Hrm() {
   const fetchAttendance = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/attendance`);
-      const data = await res.json();
-      setAttendance(data);
-      setError('');
+      const res = await ServiceCall.getv2(`/attendance`);
+      setAttendance(res?.data);
+      toast.error("");
     } catch (err) {
-      setError('Failed to fetch attendance');
+      toast.error("Failed to fetch attendance");
     }
     setLoading(false);
   };
@@ -56,91 +63,83 @@ function Hrm() {
   }, []);
 
   const addEmployee = async () => {
-    if (!empForm.employeeId || !empForm.fullName || !empForm.email || !empForm.department) {
-      setError('All fields are required');
-      setTimeout(() => setError(''), 3000);
+    if (
+      !empForm.employeeId ||
+      !empForm.fullName ||
+      !empForm.email ||
+      !empForm.department
+    ) {
+      toast.error("All fields are required");
       return;
     }
-    
+
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/employees`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(empForm)
-      });
-      
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Failed to add employee');
+      const res = await ServiceCall.postv2(`/employees`, empForm);
+
+      if (res) {
+        toast.success("Employee added successfully!");
+        setEmpForm({ employeeId: "", fullName: "", email: "", department: "" });
+        fetchEmployees();
       }
-      
-      setSuccessMsg('Employee added successfully!');
-      setEmpForm({ employeeId: '', fullName: '', email: '', department: '' });
-      fetchEmployees();
-      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
-      setError(err.message);
-      setTimeout(() => setError(''), 3000);
+      toast.error(err.message);
     }
     setLoading(false);
   };
 
   const deleteEmployee = async (id) => {
     // if (!confirm('Are you sure you want to delete this employee?')) return;
-    
+
     setLoading(true);
     try {
-      await fetch(`${API_URL}/employees/${id}`, { method: 'DELETE' });
-      setSuccessMsg('Employee deleted successfully!');
-      fetchEmployees();
-      setTimeout(() => setSuccessMsg(''), 3000);
+      const res = await ServiceCall.deletev2(`/employees`, id);
+      if (res) {
+        toast.success(res?.data?.message || "Employee deleted successfully!");
+        fetchEmployees();
+      }
     } catch (err) {
-      setError('Failed to delete employee');
-      setTimeout(() => setError(''), 3000);
+      toast.error(err, "Failed to delete employee");
+      fetchEmployees();
     }
     setLoading(false);
   };
 
   const markAttendance = async () => {
     if (!attForm.employeeId || !attForm.date) {
-      setError('Employee and date are required');
-      setTimeout(() => setError(''), 3000);
+      toast.error("Employee and date are required");
       return;
     }
-    
+
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/attendance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(attForm)
-      });
-      
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Failed to mark attendance');
+      const res = await ServiceCall.postv2(`/attendance`, attForm);
+
+      if (res) {
+        toast.success("Attendance marked successfully!");
+        setAttForm({
+          employeeId: "",
+          date: new Date().toISOString().split("T")[0],
+          status: "Present",
+        });
+        fetchAttendance();
       }
-      
-      setSuccessMsg('Attendance marked successfully!');
-      setAttForm({ employeeId: '', date: new Date().toISOString().split('T')[0], status: 'Present' });
-      fetchAttendance();
-      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
-      setError(err.message);
-      setTimeout(() => setError(''), 3000);
+      toast.error(err.message || "Failed to mark attendance");
     }
     setLoading(false);
   };
 
   const getEmployeeName = (empId) => {
-    const emp = employees.find(e => e.employeeId === empId);
+    const emp = employees.find((e) => e.employeeId === empId);
     return emp ? emp.fullName : empId;
   };
 
   const totalEmployees = employees.length;
-  const presentToday = attendance.filter(a => 
-    a.date === new Date().toISOString().split('T')[0] && a.status === 'Present'
+  const presentToday = attendance.filter(
+    (a) =>
+      a.date === new Date().toISOString().split("T")[0] &&
+      a.status === "Present",
   ).length;
 
   return (
@@ -157,24 +156,6 @@ function Hrm() {
         </div>
       </header>
 
-      {error && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center">
-            <AlertCircle className="w-5 h-5 mr-2" />
-            {error}
-          </div>
-        </div>
-      )}
-      
-      {successMsg && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center">
-            <Check className="w-5 h-5 mr-2" />
-            {successMsg}
-          </div>
-        </div>
-      )}
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
@@ -183,32 +164,44 @@ function Hrm() {
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Employees</p>
-                <p className="text-2xl font-bold text-gray-900">{totalEmployees}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Employees
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {totalEmployees}
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
             <div className="flex items-center">
               <div className="flex-shrink-0 bg-green-100 rounded-lg p-3">
                 <Check className="w-6 h-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Present Today</p>
-                <p className="text-2xl font-bold text-gray-900">{presentToday}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Present Today
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {presentToday}
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
             <div className="flex items-center">
               <div className="flex-shrink-0 bg-purple-100 rounded-lg p-3">
                 <Calendar className="w-6 h-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Attendance Records</p>
-                <p className="text-2xl font-bold text-gray-900">{attendance.length}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Attendance Records
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {attendance.length}
+                </p>
               </div>
             </div>
           </div>
@@ -219,22 +212,22 @@ function Hrm() {
         <div className="border-b border-gray-200">
           <nav className="flex space-x-8">
             <button
-              onClick={() => setActiveTab('employees')}
+              onClick={() => setActiveTab("employees")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'employees'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "employees"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               <User className="w-5 h-5 inline mr-2" />
               Employee Management
             </button>
             <button
-              onClick={() => setActiveTab('attendance')}
+              onClick={() => setActiveTab("attendance")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'attendance'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "attendance"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               <Calendar className="w-5 h-5 inline mr-2" />
@@ -245,7 +238,7 @@ function Hrm() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'employees' && (
+        {activeTab === "employees" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -261,12 +254,14 @@ function Hrm() {
                     <input
                       type="text"
                       value={empForm.employeeId}
-                      onChange={(e) => setEmpForm({...empForm, employeeId: e.target.value})}
+                      onChange={(e) =>
+                        setEmpForm({ ...empForm, employeeId: e.target.value })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="EMP001"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Full Name *
@@ -274,12 +269,14 @@ function Hrm() {
                     <input
                       type="text"
                       value={empForm.fullName}
-                      onChange={(e) => setEmpForm({...empForm, fullName: e.target.value})}
+                      onChange={(e) =>
+                        setEmpForm({ ...empForm, fullName: e.target.value })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="John Doe"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Email Address *
@@ -287,19 +284,23 @@ function Hrm() {
                     <input
                       type="email"
                       value={empForm.email}
-                      onChange={(e) => setEmpForm({...empForm, email: e.target.value})}
+                      onChange={(e) =>
+                        setEmpForm({ ...empForm, email: e.target.value })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="john@company.com"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Department *
                     </label>
                     <select
                       value={empForm.department}
-                      onChange={(e) => setEmpForm({...empForm, department: e.target.value})}
+                      onChange={(e) =>
+                        setEmpForm({ ...empForm, department: e.target.value })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select Department</option>
@@ -310,13 +311,13 @@ function Hrm() {
                       <option value="Finance">Finance</option>
                     </select>
                   </div>
-                  
+
                   <button
                     onClick={addEmployee}
                     disabled={loading}
                     className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
                   >
-                    {loading ? 'Adding...' : 'Add Employee'}
+                    {loading ? "Adding..." : "Add Employee"}
                   </button>
                 </div>
               </div>
@@ -325,11 +326,15 @@ function Hrm() {
             <div className="lg:col-span-2">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-900">All Employees</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    All Employees
+                  </h2>
                 </div>
-                
+
                 {loading && employees.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">Loading...</div>
+                  <div className="p-8 text-center text-gray-500">
+                    Loading...
+                  </div>
                 ) : employees.length === 0 ? (
                   <div className="p-8 text-center text-gray-500">
                     <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
@@ -393,7 +398,7 @@ function Hrm() {
           </div>
         )}
 
-        {activeTab === 'attendance' && (
+        {activeTab === "attendance" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -408,18 +413,20 @@ function Hrm() {
                     </label>
                     <select
                       value={attForm.employeeId}
-                      onChange={(e) => setAttForm({...attForm, employeeId: e.target.value})}
+                      onChange={(e) =>
+                        setAttForm({ ...attForm, employeeId: e.target.value })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select Employee</option>
-                      {employees.map(emp => (
+                      {employees.map((emp) => (
                         <option key={emp._id} value={emp.employeeId}>
                           {emp.employeeId} - {emp.fullName}
                         </option>
                       ))}
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Date *
@@ -427,11 +434,13 @@ function Hrm() {
                     <input
                       type="date"
                       value={attForm.date}
-                      onChange={(e) => setAttForm({...attForm, date: e.target.value})}
+                      onChange={(e) =>
+                        setAttForm({ ...attForm, date: e.target.value })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Status *
@@ -441,8 +450,10 @@ function Hrm() {
                         <input
                           type="radio"
                           value="Present"
-                          checked={attForm.status === 'Present'}
-                          onChange={(e) => setAttForm({...attForm, status: e.target.value})}
+                          checked={attForm.status === "Present"}
+                          onChange={(e) =>
+                            setAttForm({ ...attForm, status: e.target.value })
+                          }
                           className="mr-2"
                         />
                         <Check className="w-4 h-4 text-green-600 mr-1" />
@@ -452,8 +463,10 @@ function Hrm() {
                         <input
                           type="radio"
                           value="Absent"
-                          checked={attForm.status === 'Absent'}
-                          onChange={(e) => setAttForm({...attForm, status: e.target.value})}
+                          checked={attForm.status === "Absent"}
+                          onChange={(e) =>
+                            setAttForm({ ...attForm, status: e.target.value })
+                          }
                           className="mr-2"
                         />
                         <X className="w-4 h-4 text-red-600 mr-1" />
@@ -461,13 +474,13 @@ function Hrm() {
                       </label>
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={markAttendance}
                     disabled={loading}
                     className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
                   >
-                    {loading ? 'Marking...' : 'Mark Attendance'}
+                    {loading ? "Marking..." : "Mark Attendance"}
                   </button>
                 </div>
               </div>
@@ -476,15 +489,21 @@ function Hrm() {
             <div className="lg:col-span-2">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-900">Attendance Records</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Attendance Records
+                  </h2>
                 </div>
-                
+
                 {loading && attendance.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">Loading...</div>
+                  <div className="p-8 text-center text-gray-500">
+                    Loading...
+                  </div>
                 ) : attendance.length === 0 ? (
                   <div className="p-8 text-center text-gray-500">
                     <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    <p>No attendance records found. Mark your first attendance!</p>
+                    <p>
+                      No attendance records found. Mark your first attendance!
+                    </p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -506,32 +525,35 @@ function Hrm() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {attendance.slice().reverse().map((att) => (
-                          <tr key={att._id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {att.employeeId}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {getEmployeeName(att.employeeId)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {new Date(att.date).toLocaleDateString()}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {att.status === 'Present' ? (
-                                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium flex items-center w-fit">
-                                  <Check className="w-3 h-3 mr-1" />
-                                  Present
-                                </span>
-                              ) : (
-                                <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium flex items-center w-fit">
-                                  <X className="w-3 h-3 mr-1" />
-                                  Absent
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                        {attendance
+                          .slice()
+                          .reverse()
+                          .map((att) => (
+                            <tr key={att._id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {att.employeeId}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {getEmployeeName(att.employeeId)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {new Date(att.date).toLocaleDateString()}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                {att.status === "Present" ? (
+                                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium flex items-center w-fit">
+                                    <Check className="w-3 h-3 mr-1" />
+                                    Present
+                                  </span>
+                                ) : (
+                                  <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium flex items-center w-fit">
+                                    <X className="w-3 h-3 mr-1" />
+                                    Absent
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
                   </div>
